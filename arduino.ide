@@ -4,8 +4,8 @@
 // ==========================================
 // DATOS DE LA RED WIFI
 // ==========================================
-const char* ssid = "iPhone de Matheo";
-const char* password = "messi1234";
+const char* ssid = "Xiaomi rabioso de barra";
+const char* password = "BarraIdolo67";
 
 // ==========================================
 // SERVIDOR WEB
