@@ -1,0 +1,176 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+// ==========================================
+// DATOS DE LA RED WIFI
+// ==========================================
+const char* ssid = "iPhone de Matheo";
+const char* password = "messi1234";
+
+// ==========================================
+// SERVIDOR WEB
+// ==========================================
+WebServer server(80);
+
+// ==========================================
+// LED INTERNO
+// ==========================================
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 2
+#endif
+
+bool ledState = false;
+
+// ==========================================
+// PÁGINA WEB
+// ==========================================
+const char pagina[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Control LED ESP32</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #222;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding-top: 80px;
+    }
+
+    h1 {
+      color: #00d9ff;
+    }
+
+    .estado {
+      font-size: 24px;
+      margin: 30px;
+    }
+
+    button {
+      width: 220px;
+      padding: 20px;
+      font-size: 22px;
+      border: none;
+      border-radius: 15px;
+      color: white;
+      cursor: pointer;
+    }
+
+    .encendido {
+      background-color: green;
+    }
+
+    .apagado {
+      background-color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Control del LED del ESP32</h1>
+
+  <div class="estado">
+    Estado del LED: <strong>%ESTADO%</strong>
+  </div>
+
+  <form action="/toggle" method="GET">
+    <button class="%CLASE%">
+      %BOTON%
+    </button>
+  </form>
+
+</body>
+</html>
+)rawliteral";
+
+// ==========================================
+// MOSTRAR PÁGINA
+// ==========================================
+void mostrarPagina() {
+
+  String html = pagina;
+
+  if (ledState) {
+    html.replace("%ESTADO%", "ENCENDIDO");
+    html.replace("%CLASE%", "encendido");
+    html.replace("%BOTON%", "APAGAR LED");
+  } 
+  else {
+    html.replace("%ESTADO%", "APAGADO");
+    html.replace("%CLASE%", "apagado");
+    html.replace("%BOTON%", "ENCENDER LED");
+  }
+
+  server.send(200, "text/html", html);
+}
+
+// ==========================================
+// ENCENDER / APAGAR LED
+// ==========================================
+void cambiarLED() {
+
+  ledState = !ledState;
+
+  digitalWrite(LED_BUILTIN, ledState ? HIGH : LOW);
+
+  server.sendHeader("Location", "/");
+  server.send(303);
+}
+
+// ==========================================
+// CONFIGURACIÓN
+// ==========================================
+void setup() {
+
+  Serial.begin(115200);
+
+  // Configurar LED
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+
+  // ========================================
+  // CONECTAR A WIFI
+  // ========================================
+  Serial.println();
+  Serial.println("Conectando a WiFi...");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("================================");
+  Serial.println("WiFi conectado correctamente");
+  Serial.print("IP del ESP32: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("================================");
+
+  // ========================================
+  // RUTAS DEL SERVIDOR
+  // ========================================
+  server.on("/", mostrarPagina);
+  server.on("/toggle", cambiarLED);
+
+  // Iniciar servidor
+  server.begin();
+
+  Serial.println("Servidor web iniciado");
+}
+
+// ==========================================
+// LOOP
+// ==========================================
+void loop() {
+
+  server.handleClient();
+}
